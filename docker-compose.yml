@@ -1,0 +1,82 @@
+services:
+  # Paper サーバー本体。Geyser と Floodgate は起動時に取得する
+  mc:
+    image: itzg/minecraft-server
+    restart: unless-stopped
+    environment:
+      EULA: "TRUE"
+      TYPE: PAPER
+      # Geyser が対応する版に固定する。LATEST にすると、Geyser が未対応の版へ
+      # 勝手に上がって Bedrock 版が入れなくなる。上げ方は README を参照
+      VERSION: ${MC_VERSION:?MC_VERSION is required}
+      MEMORY: ${MC_MEMORY:-4G}
+      USE_AIKAR_FLAGS: "TRUE"
+      MOTD: ${MOTD:-A Minecraft Server}
+      DIFFICULTY: ${DIFFICULTY:-normal}
+      VIEW_DISTANCE: ${VIEW_DISTANCE:-10}
+      MAX_PLAYERS: ${MAX_PLAYERS:-20}
+      RCON_PASSWORD: ${RCON_PASSWORD:?RCON_PASSWORD is required}
+      # IPv4 を優先し、認証サーバーへの接続が IPv6 で失敗するのを防ぐ
+      JVM_DD_OPTS: "java.net.preferIPv4Stack=true"
+      PLUGINS: |
+        https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot
+        https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot
+    ports:
+      - "${JAVA_PORT:-25565}:25565/tcp"
+      - "${BEDROCK_PORT:-19132}:19132/udp"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: mc-health
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
+  # 定期バックアップ。保存前に save-off と save-all を送るため RCON を使う
+  backups:
+    image: itzg/mc-backup
+    restart: unless-stopped
+    environment:
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-4h}
+      PRUNE_BACKUPS_DAYS: ${PRUNE_BACKUPS_DAYS:-7}
+      RCON_HOST: mc
+      RCON_PORT: 25575
+      RCON_PASSWORD: ${RCON_PASSWORD:?RCON_PASSWORD is required}
+      BACKUP_METHOD: tar
+      INITIAL_DELAY: 120
+    volumes:
+      - ./data:/data:ro
+      - ./backups:/backups
+    depends_on:
+      mc:
+        condition: service_healthy
+
+  # バックアップからの復元。docker compose run --rm restore-backup で手動実行する
+  restore-backup:
+    image: itzg/mc-backup
+    restart: "no"
+    profiles:
+      - restore
+    entrypoint: restore-tar-backup
+    volumes:
+      - ./data:/data
+      - ./backups:/backups:ro
+
+  # RCON の Web UI。外へ出さず、localhost だけに開く。
+  # 手元から見るときは ssh -L 4326:127.0.0.1:4326 で転送する
+  rcon-web:
+    image: itzg/rcon
+    restart: unless-stopped
+    environment:
+      RWA_USERNAME: ${RWA_USERNAME:-admin}
+      RWA_PASSWORD: ${RWA_PASSWORD:?RWA_PASSWORD is required}
+      RWA_RCON_HOST: mc
+      RWA_RCON_PORT: 25575
+      RWA_RCON_PASSWORD: ${RCON_PASSWORD:?RCON_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${RCON_WEB_PORT:-4326}:4326"
+      - "127.0.0.1:${RCON_WEB_WS_PORT:-4327}:4327"
+    depends_on:
+      mc:
+        condition: service_healthy

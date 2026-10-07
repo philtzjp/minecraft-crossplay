@@ -1,0 +1,77 @@
+name: deploy
+
+# main の変更を VPS へ転送し、コンテナを入れ替える
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: SSH の鍵と known_hosts を置く
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: .env を作る
+        env:
+          MC_VERSION: ${{ vars.MC_VERSION }}
+          MC_MEMORY: ${{ vars.MC_MEMORY }}
+          MOTD: ${{ vars.MOTD }}
+          DIFFICULTY: ${{ vars.DIFFICULTY }}
+          VIEW_DISTANCE: ${{ vars.VIEW_DISTANCE }}
+          MAX_PLAYERS: ${{ vars.MAX_PLAYERS }}
+          RCON_PASSWORD: ${{ secrets.RCON_PASSWORD }}
+          RWA_USERNAME: ${{ vars.RWA_USERNAME }}
+          RWA_PASSWORD: ${{ secrets.RWA_PASSWORD }}
+        run: |
+          if [ -z "$MC_VERSION" ]; then
+            echo "variables の MC_VERSION が未設定。固定したい Paper のバージョンを設定する" >&2
+            exit 1
+          fi
+          # variables が未設定の項目は .env に書かず、compose の既定値に任せる
+          : > .env
+          for key in MC_VERSION MC_MEMORY MOTD DIFFICULTY VIEW_DISTANCE MAX_PLAYERS RWA_USERNAME; do
+            value="${!key}"
+            [ -n "$value" ] && printf '%s=%s\n' "$key" "$value" >> .env
+          done
+          printf 'RCON_PASSWORD=%s\n' "$RCON_PASSWORD" >> .env
+          printf 'RWA_PASSWORD=%s\n' "$RWA_PASSWORD" >> .env
+
+      - name: 設定を転送する
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+          REMOTE_DIR: ${{ vars.REMOTE_DIR || '/opt/minecraft-crossplay' }}
+        run: |
+          # data と backups はサーバーの資産なので、転送からも削除からも外す
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p $REMOTE_DIR"
+          rsync -az --delete \
+            --exclude '.git' --exclude 'data' --exclude 'backups' \
+            -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
+            ./ "$SSH_USER@$SSH_HOST:$REMOTE_DIR/"
+
+      - name: コンテナを入れ替える
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+          REMOTE_DIR: ${{ vars.REMOTE_DIR || '/opt/minecraft-crossplay' }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+            "cd $REMOTE_DIR && docker compose pull --quiet && docker compose up -d --remove-orphans && docker compose ps"
