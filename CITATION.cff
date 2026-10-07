@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use minecraft-crossplay in your work, please cite it as below."
+type: software
+title: minecraft-crossplay
+abstract: >-
+  Run a Minecraft server where Java and Bedrock players share one world, on a
+  single VPS with Docker Compose.
+authors:
+  - family-names: Ouchi
+    given-names: Arata
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/philtzjp/minecraft-crossplay"
