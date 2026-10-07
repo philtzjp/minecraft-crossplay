@@ -1,7 +1,7 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo.png">
-  <img src="docs/assets/logo-outline.png" width="96" alt="Philtz">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/philtzjp/.github/main/images/philtz-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/philtzjp/.github/main/images/philtz-light.png">
+  <img src="https://raw.githubusercontent.com/philtzjp/.github/main/images/philtz-outline.png" width="96" alt="Philtz">
 </picture>
 
 # minecraft-crossplay

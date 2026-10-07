@@ -1,7 +1,7 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo.png">
-  <img src="docs/assets/logo-outline.png" width="96" alt="Philtz">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/philtzjp/.github/main/images/philtz-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/philtzjp/.github/main/images/philtz-light.png">
+  <img src="https://raw.githubusercontent.com/philtzjp/.github/main/images/philtz-outline.png" width="96" alt="Philtz">
 </picture>
 
 # Contributing
@@ -68,7 +68,6 @@ When you are done, `docker compose down` and delete the generated `data/` and `b
 | `.env.example` | All settings, with defaults |
 | `.github/workflows/` | Compose validation, and deployment to a VPS |
 | `AGENTS.md` | Conventions for coding agents |
-| `docs/assets/` | Logos |
 
 </details>
 
@@ -129,6 +128,5 @@ docker compose logs -f mc
 | `.env.example` | 設定の一覧と既定値 |
 | `.github/workflows/` | compose の検証と、VPS への配置 |
 | `AGENTS.md` | コーディングエージェント向けの規約 |
-| `docs/assets/` | ロゴ |
 
 </details>
